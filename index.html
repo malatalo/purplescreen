@@ -9,6 +9,7 @@
         margin: 0;
         padding: 0;
         background-color: black;
+        overflow: hidden;
       }
       button {
         border: 0;
@@ -17,10 +18,22 @@
       }
       #container {
         display: grid;
-          height: 100vh;
+        height: 100vh;
         grid-gap: 5px;
         grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
         grid-auto-rows: auto 200px 30px;
+      }
+      #buttons {
+        display: grid;
+        height: 30px;
+        grid-gap: 5px;
+        grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+        position: absolute;
+        bottom: -29px;
+        width: 100vw;
+      }
+      #buttons:hover {
+        bottom: 0;
       }
       .purpleScreen {
           height: 100vh;
@@ -45,6 +58,7 @@
   </head>
   <body id="body">
     <div id="container"></div>
+    <div id="buttons"></div>
 
     <script>
       if (location.protocol !== 'https:') {
@@ -59,7 +73,6 @@
           if(activateId === id){
             div.style.gridColumn = "1 / -1";
             div.style.gridRow = "1";
-            player.setVolume(1);
             player.setMuted(false);
           } else {
             div.style.gridColumn = defCol;
@@ -77,7 +90,10 @@
         channels = document.location.hash.slice(1).split(",").map(c => ({id: c}));
 
         const container = document.getElementById("container");
-        container.style.gridTemplateColumns = `auto ${"356px ".repeat(channels.length)}auto`
+        const buttons = document.getElementById("buttons");
+        const templCols =  `auto ${"356px ".repeat(channels.length)}auto`;
+        container.style.gridTemplateColumns = templCols;
+        buttons.style.gridTemplateColumns = templCols;
 
         channels = channels.map(({id}, i) => {
           const el = document.createElement("div");
@@ -89,12 +105,11 @@
 
           const btn = document.createElement("button");
           btn.innerHTML = `<span class="underline">${i + 1}</span> ${id}`
-          btn.style.gridRow = "3";
           btn.style.gridColumn = defCol;
           btn.onclick = () => activateChannel(id);
-          container.appendChild(btn)
+          buttons.appendChild(btn)
 
-          const player = new Twitch.Embed(id, {
+          const embed = new Twitch.Embed(id, {
             width: "100%",
             height: "100%",
             channel: id,
@@ -102,15 +117,22 @@
             autoplay: true,
             layout: "video",
           });
+          // const embed = {getPlayer: () => ({setVolume: ()=>{}, setMuted: () => {}})}
 
-          return {id, player: player.getPlayer(), el, defCol}
+          const player = embed.getPlayer();
+
+          embed.addEventListener(Twitch.Embed.VIDEO_PLAY, () => {
+            player.setVolume(1);
+            player.setQuality("chunked");
+          });
+
+          return {id, player, el, defCol}
         })
       }
 
       const keyPressed = (e) => {
         if(!isNaN(e.key)){
-          const num = e.key - 1;
-          const channel = channels[num];
+          const channel = channels[e.key - 1];
           if(channel){
             activateChannel(channel.id)
           }
