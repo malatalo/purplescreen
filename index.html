@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <script src="https://embed.twitch.tv/embed/v1.js"></script>
+    <title>PurpleScreen</title>
+    <style>
+      body{
+        margin: 0;
+        padding: 0;
+        background-color: black;
+      }
+      button {
+        border: 0;
+        background-color: #116696;
+        cursor: pointer;
+      }
+      #container {
+        display: grid;
+          height: 100vh;
+        grid-gap: 5px;
+        grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+        grid-auto-rows: auto 200px 30px;
+      }
+      .purpleScreen {
+          height: 100vh;
+          width: 100vw;
+          display:flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          background-color: purple;
+          font-size: 72px;
+          font-family: "Comic Sans MS";
+          color: pink;
+      }
+      .smallText {
+          font-size: 14px;
+      }
+      .underline {
+          text-decoration: underline;
+      }
+    </style>
+
+  </head>
+  <body id="body">
+    <div id="container"></div>
+
+    <script>
+      let channels = [];
+
+      const activateChannel = (activateId) => {
+        channels.forEach(({id, player, defCol}) => {
+          const div = document.getElementById(id);
+          if(activateId === id){
+            div.style.gridColumn = "1 / -1";
+            div.style.gridRow = "1";
+            player.setVolume(1);
+            player.setMuted(false);
+          } else {
+            div.style.gridColumn = defCol;
+            div.style.gridRow = "2";
+            player.setMuted(true);
+          }
+        })
+      }
+
+      const setup = () => {
+        if(!document.location.hash) {
+          document.getElementById("body").innerHTML="<div class='purpleScreen'><span>Purple Screen</span><span class='smallText'>Add Twitch channels to url hash, separated by comma (,)</span></div>";
+          return;
+        }
+        channels = document.location.hash.slice(1).split(",").map(c => ({id: c}));
+
+        const container = document.getElementById("container");
+        container.style.gridTemplateColumns = `auto ${"356px ".repeat(channels.length)}auto`
+
+        channels = channels.map(({id}, i) => {
+          const el = document.createElement("div");
+          const defCol = `${i+2}`
+          el.id = id;
+          el.style.gridRow = "2";
+          el.style.gridColumn = defCol;
+          container.appendChild(el);
+
+          const btn = document.createElement("button");
+          btn.innerHTML = `<span class="underline">${i + 1}</span> ${id}`
+          btn.style.gridRow = "3";
+          btn.style.gridColumn = defCol;
+          btn.onclick = () => activateChannel(id);
+          container.appendChild(btn)
+
+          const player = new Twitch.Embed(id, {
+            width: "100%",
+            height: "100%",
+            channel: id,
+            muted: true,
+            autoplay: true,
+            layout: "video",
+          });
+
+          return {id, player: player.getPlayer(), el, defCol}
+        })
+      }
+
+      const keyPressed = (e) => {
+        if(!isNaN(e.key)){
+          const num = e.key - 1;
+          const channel = channels[num];
+          if(channel){
+            activateChannel(channel.id)
+          }
+        }
+      }
+      document.addEventListener('keydown', keyPressed);
+
+      window.onhashchange = () => location.reload();
+      setup();
+    </script>
+  </body>
+</html>
