@@ -47,6 +47,10 @@
     <div id="container"></div>
 
     <script>
+      if (location.protocol !== 'https:') {
+        location.replace(`https:${location.href.substring(location.protocol.length)}`);
+      }
+
       let channels = [];
 
       const activateChannel = (activateId) => {
