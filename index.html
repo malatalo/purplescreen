@@ -43,49 +43,76 @@
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          background-color: purple;
-          font-size: 72px;
+          background-color: #9146ff;
           font-family: "Comic Sans MS";
-          color: pink;
-      }
-      .smallText {
-          font-size: 14px;
+          color: #6441a5;
       }
       .underline {
           text-decoration: underline;
+      }
+      #helloworld {
+          display: none;
+      }
+      h1{
+          font-size: 72px;
       }
     </style>
 
   </head>
   <body id="body">
-    <div id="container"></div>
-    <div id="buttons"></div>
+    <div id="helloworld">
+      <div class='purpleScreen'>
+        <h1>Purple Screen</h1>
+        Add Twitch channels to url hash, separated by comma (,)
+      </div>
+    </div>
+    <div id="streams">
+      <div id="container"></div>
+      <div id="buttons"></div>
+    </div>
 
     <script>
-      if (location.protocol !== 'https:') {
+      const dev = 0;
+      let activeId = "";
+      let fullscreen = false;
+
+      if (location.protocol !== 'https:' && dev < 1) {
         location.replace(`https:${location.href.substring(location.protocol.length)}`);
       }
 
       let channels = [];
 
       const activateChannel = (activateId) => {
-        channels.forEach(({id, player, defCol}) => {
-          const div = document.getElementById(id);
-          if(activateId === id){
-            div.style.gridColumn = "1 / -1";
-            div.style.gridRow = "1";
-            player.setMuted(false);
+        if(activeId === activateId) {
+          const container = document.getElementById("container");
+          if(fullscreen) {
+            container.style.gridAutoRows = "auto 200px 30px";
+            fullscreen = false;
           } else {
-            div.style.gridColumn = defCol;
-            div.style.gridRow = "2";
-            player.setMuted(true);
+            container.style.gridAutoRows = "100vh 200px 30px";
+            fullscreen = true;
           }
-        })
+        } else {
+          activeId = activateId;
+          channels.forEach(({id, player, defCol}) => {
+            const div = document.getElementById(id);
+            if(activateId === id){
+              div.style.gridColumn = "1 / -1";
+              div.style.gridRow = "1";
+              player.setMuted(false);
+            } else {
+              div.style.gridColumn = defCol;
+              div.style.gridRow = "2";
+              player.setMuted(true);
+            }
+          })
+        }
       }
 
       const setup = () => {
         if(!document.location.hash) {
-          document.getElementById("body").innerHTML="<div class='purpleScreen'><span>Purple Screen</span><span class='smallText'>Add Twitch channels to url hash, separated by comma (,)</span></div>";
+          document.getElementById("streams").style.display="none";
+          document.getElementById("helloworld").style.display="block";
           return;
         }
         channels = document.location.hash.slice(1).split(",").map(c => ({id: c}));
@@ -102,30 +129,34 @@
           el.id = id;
           el.style.gridRow = "2";
           el.style.gridColumn = defCol;
+          el.style.backgroundColor = "#9146ff";
           container.appendChild(el);
 
           const btn = document.createElement("button");
           btn.innerHTML = `<span class="underline">${i + 1}</span> ${id}`
           btn.style.gridColumn = defCol;
           btn.onclick = () => activateChannel(id);
-          buttons.appendChild(btn)
+          buttons.appendChild(btn);
 
-          const embed = new Twitch.Embed(id, {
-            width: "100%",
-            height: "100%",
-            channel: id,
-            muted: true,
-            autoplay: true,
-            layout: "video",
-          });
-          // const embed = {getPlayer: () => ({setVolume: ()=>{}, setMuted: () => {}})}
+          let embed;
+          if(dev < 2) {
+            embed = new Twitch.Embed(id, {
+              width: "100%",
+              height: "100%",
+              channel: id,
+              muted: true,
+              autoplay: true,
+              layout: "video",
+            });
+            embed.addEventListener(Twitch.Embed.VIDEO_PLAY, () => {
+              player.setVolume(1);
+              player.setQuality("chunked");
+            });
+          } else {
+            embed = {getPlayer: () => ({setVolume: ()=>{}, setMuted: () => {}})}
+          }
 
           const player = embed.getPlayer();
-
-          embed.addEventListener(Twitch.Embed.VIDEO_PLAY, () => {
-            player.setVolume(1);
-            player.setQuality("chunked");
-          });
 
           return {id, player, el, defCol}
         })
