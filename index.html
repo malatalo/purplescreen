@@ -72,7 +72,7 @@
     </div>
 
     <script>
-      const dev = 0;
+      const dev = 0; // 0 = 'prod', 1 = no https redirect (localhost), 2 = 1 + no twitch loading
       let activeId = "";
       let fullscreen = false;
 
@@ -84,14 +84,7 @@
 
       const activateChannel = (activateId) => {
         if(activeId === activateId) {
-          const container = document.getElementById("container");
-          if(fullscreen) {
-            container.style.gridAutoRows = "auto 200px 30px";
-            fullscreen = false;
-          } else {
-            container.style.gridAutoRows = "100vh 200px 30px";
-            fullscreen = true;
-          }
+          return;
         } else {
           activeId = activateId;
           channels.forEach(({id, player, defCol}) => {
@@ -167,6 +160,15 @@
           const channel = channels[e.key - 1];
           if(channel){
             activateChannel(channel.id)
+          }
+        } else if (e.key === "f") {
+          const container = document.getElementById("container");
+          if(fullscreen) {
+            container.style.gridAutoRows = "auto 200px 30px";
+            fullscreen = false;
+          } else {
+            container.style.gridAutoRows = "100vh 200px 30px";
+            fullscreen = true;
           }
         }
       }
