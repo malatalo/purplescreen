@@ -10,6 +10,7 @@
         padding: 0;
         background-color: black;
         overflow: hidden;
+        font-size: 20px;
       }
       button {
         border: 0;
@@ -24,11 +25,11 @@
         grid-auto-rows: auto 200px 30px;
       }
       #buttons {
+        position: fixed;
         display: grid;
         height: 30px;
         grid-gap: 0 5px;
         grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-        position: absolute;
         padding-top: 1px;
         bottom: -30px;
         width: 100vw;
@@ -37,24 +38,66 @@
         bottom: 0;
       }
       .purpleScreen {
-          height: 100vh;
-          width: 100vw;
-          display:flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          background-color: #9146ff;
-          font-family: "Comic Sans MS";
-          color: #6441a5;
+        height: 100vh;
+        width: 100vw;
+        display:flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #9146ff;
+        font-family: "Comic Sans MS";
+        color: #6441a5;
       }
       .underline {
-          text-decoration: underline;
+        text-decoration: underline;
       }
       #helloworld {
-          display: none;
+        display: none;
       }
       h1{
-          font-size: 72px;
+        font-size: 72px;
+      }
+      #sidebar {
+        position: fixed;
+        top: 0;
+        width: 300px;
+        padding-right: 2px;
+        height: 100vh;
+      }
+      #sidebar-content {
+        background-color: black;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 0 25px;
+        border-radius: 0 20px 20px 0;
+        border-right: 1px solid black;
+        background: rgb(17,102,150);
+        background: linear-gradient(90deg, rgb(17,102,150) 0%, rgb(65,150,198) 100%);
+      }
+      .submit-button {
+        box-shadow: 1px 2px 2px black;
+        padding: 5px 10px;
+        border-radius: 4px;
+        margin: 5px 0;
+        float: right;
+        font-size: 15px;
+      }
+      input {
+        padding: 5px;
+        border-radius: 5px;
+        width: 235px;
+      }
+      #channelList {
+        display: flex;
+        flex-direction: column;
+        margin-top: 50px;
+      }
+      #channelList > * {
+        margin: 10px 0;
+        display: flex;
+        justify-content: space-between;
       }
     </style>
 
@@ -63,16 +106,33 @@
     <div id="helloworld">
       <div class='purpleScreen'>
         <h1>Purple Screen</h1>
-        Add Twitch channels to url hash, separated by comma (,)
+        <div>Add Twitch channels to url hash, separated by comma (,)</div>
+        <div>Or hover mouse on the very left</div>
+        <div>Or press A</div>
       </div>
     </div>
-    <div id="streams">
-      <div id="container"></div>
-      <div id="buttons"></div>
+    <div id="container"></div>
+    <div id="buttons"></div>
+    <div id="sidebar" onmouseover="moveRight()" onmouseout="moveLeft()">
+      <div id="sidebar-content">
+        <form id="form" name="form">
+          <label for="channel">Channel name/url</label>
+          <input type="text" name="channelInput" id="channelInput" /><br/>
+          <button class="submit-button" type="submit">ADD</button>
+        </form>
+        <div id="channelList"></div>
+      </div>
     </div>
 
     <script>
       const dev = 0; // 0 = 'prod', 1 = no https redirect (localhost), 2 = 1 + no twitch loading
+      const helloworldEl = document.getElementById("helloworld");
+      const sidebarEl = document.getElementById("sidebar");
+      const containerEl = document.getElementById("container");
+      const buttonsEl = document.getElementById("buttons");
+      const channelInputEl = document.getElementById("channelInput");
+      const channelListEl = document.getElementById("channelList");
+      let userChangedHash = true;
       let activeId = "";
       let fullscreen = false;
 
@@ -87,49 +147,75 @@
           return;
         } else {
           activeId = activateId;
-          channels.forEach(({id, player, defCol}) => {
-            const div = document.getElementById(id);
-            if(activateId === id){
-              div.style.gridColumn = "1 / -1";
-              div.style.gridRow = "1";
-              player.setMuted(false);
-            } else {
-              div.style.gridColumn = defCol;
-              div.style.gridRow = "2";
-              player.setMuted(true);
-            }
-          })
+          refreshChannelPos();
         }
       }
 
-      const setup = () => {
-        if(!document.location.hash) {
-          document.getElementById("streams").style.display="none";
-          document.getElementById("helloworld").style.display="block";
+      const refreshChannelPos = () => {
+        channels.forEach(({id, player, defCol, el, btn}) => {
+          if(activeId === id){
+            el.style.gridColumn = "1 / -1";
+            el.style.gridRow = "1";
+            player.setMuted(false);
+          } else {
+            btn.style.gridColumn = defCol;
+            el.style.gridColumn = defCol;
+            el.style.gridRow = "2";
+            player.setMuted(true);
+          }
+        });
+      }
+
+      const refresh = () => {
+        if(channels.length === 0) {
+          helloworldEl.style.display="block";
+        } else {
+          helloworldEl.style.display="none";
+        }
+
+        if (channels.length > 5) {
+          channels.length = 5;
           return;
         }
-        channels = document.location.hash.slice(1).split(",").map(c => ({id: c}));
 
-        const container = document.getElementById("container");
-        const buttons = document.getElementById("buttons");
         const templCols =  `auto ${"356px ".repeat(channels.length)}auto`;
-        container.style.gridTemplateColumns = templCols;
-        buttons.style.gridTemplateColumns = templCols;
+        containerEl.style.gridTemplateColumns = templCols;
+        buttonsEl.style.gridTemplateColumns = templCols;
 
-        channels = channels.map(({id}, i) => {
-          const el = document.createElement("div");
-          const defCol = `${i+2}`
+        while(channelListEl.firstChild) channelListEl.firstChild.remove();
+
+        channels = channels.map((c,i) => {
+          const chnlDiv = document.createElement("div");
+          const span = document.createElement("span");
+          span.innerText = "X";
+          span.style.cursor = "pointer";
+          span.onclick = removeChannel(c);
+          chnlDiv.innerText = c.id;
+          chnlDiv.appendChild(span)
+          channelListEl.appendChild(chnlDiv);
+          return {...c, defCol: i + 2};
+        });
+
+        userChangedHash = false;
+        document.location.hash = "#" + channels.map(c => c.id).join(",")
+
+        refreshChannelPos();
+      }
+
+      const newChannel = ((id, index) => {
+        const el = document.createElement("div");
+          const defCol = index + 1;
           el.id = id;
-          el.style.gridRow = "2";
+          el.style.gridRow = 2;
           el.style.gridColumn = defCol;
           el.style.backgroundColor = "#9146ff";
-          container.appendChild(el);
+          containerEl.appendChild(el);
 
           const btn = document.createElement("button");
-          btn.innerHTML = `<span class="underline">${i + 1}</span> ${id}`
+          btn.innerHTML = `<span class="underline">${index}</span> ${id}`
           btn.style.gridColumn = defCol;
           btn.onclick = () => activateChannel(id);
-          buttons.appendChild(btn);
+          buttonsEl.appendChild(btn);
 
           let embed;
           if(dev < 2) {
@@ -146,17 +232,41 @@
               player.setQuality("chunked");
             });
           } else {
-            embed = {getPlayer: () => ({setVolume: ()=>{}, setMuted: () => {}})}
+            const idDiv = document.createElement("div")
+            idDiv.innerText = id;
+            idDiv.style.fontSize = "42px";
+            idDiv.style.textAlign = "center";
+            el.appendChild(idDiv)
+            embed = {getPlayer: () => ({setVolume: ()=>{}, setMuted: () => {}, pause: () => {}})}
           }
 
           const player = embed.getPlayer();
 
-          return {id, player, el, defCol}
-        })
+          return {id, player, el, btn, defCol}
+      })
+
+      const setup = () => {
+        if(!document.location.hash) {
+          helloworldEl.style.display="block";
+          return;
+        }
+        channels = document.location.hash.slice(1).split(",").map(c => ({id: c}));
+
+        channels = channels.map(({id}, i) => 
+          newChannel(id, i + 1)
+        )
+
+        refresh();
       }
 
       const keyPressed = (e) => {
-        if(!isNaN(e.key)){
+        if (e.key === "Escape") {
+          channelInputEl.value = "";
+          channelInputEl.blur();
+          moveLeft();
+        } else if(channelInputEl === document.activeElement) {
+          return;
+        } else if(!isNaN(e.key)){
           const channel = channels[e.key - 1];
           if(channel){
             activateChannel(channel.id)
@@ -164,17 +274,78 @@
         } else if (e.key === "f") {
           const container = document.getElementById("container");
           if(fullscreen) {
-            container.style.gridAutoRows = "auto 200px 30px";
+            containerEl.style.gridAutoRows = "auto 200px 30px";
             fullscreen = false;
           } else {
-            container.style.gridAutoRows = "100vh 200px 30px";
+            containerEl.style.gridAutoRows = "100vh 200px 30px";
             fullscreen = true;
           }
+        } else if (e.key === "a") {
+          moveRight();
+          channelInputEl.focus();
+          setTimeout(()=>{channelInputEl.value=""},1); // why?
         }
       }
-      document.addEventListener('keydown', keyPressed);
 
-      window.onhashchange = () => location.reload();
+      const formSubmit = (e) => {
+        e.preventDefault();
+        const form = document.getElementById("form");
+        const formData = new FormData(form);
+        let channel = formData.get("channelInput");
+        form.reset();
+        channelInputEl.blur();
+
+        moveLeft();
+
+        if(!channel) {
+          document.getElementById("sidebar").style.left = "-300px";
+          return;
+        } else if (channels.length > 4) { 
+          return
+        }
+
+        if(channel.includes("twitch.tv")) {
+          channel = channel.split("twitch.tv/")[1].split("/")[0]
+        }
+        
+        channels = [...channels, newChannel(channel, channels.length + 1)];
+
+        refresh();
+      }
+
+      document.getElementById("sidebar").style.left = "-300px";
+
+      const moveRight = () => {
+        sidebarEl.style.left = 0;
+      }
+      const moveLeft = () => {
+        sidebarEl.style.left = "-300px";
+      }
+
+      const removeChannel = (channel) => () => {
+        // There doesn't seem to be a way to stop the playback, hope this does something
+        channel.player.pause();
+        channel.player = null;
+        channel.el.remove();
+        channel.btn.remove();
+        const index = channels.findIndex((c)=> c.id === channel.id);
+        if (index > -1) {
+          channels.splice(index, 1);
+        }
+        refresh();
+      }
+
+      document.addEventListener('keydown', keyPressed);
+      document.addEventListener("submit", formSubmit);
+
+      window.addEventListener("hashchange", () => {
+        if(!userChangedHash) {
+          userChangedHash = true;
+          return;
+        }
+        window.location.reload();
+      })
+      
       setup();
     </script>
   </body>
