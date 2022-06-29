@@ -227,10 +227,6 @@
               autoplay: true,
               layout: "video",
             });
-            embed.addEventListener(Twitch.Embed.VIDEO_PLAY, () => {
-              player.setVolume(1);
-              player.setQuality("chunked");
-            });
           } else {
             const idDiv = document.createElement("div")
             idDiv.innerText = id;
